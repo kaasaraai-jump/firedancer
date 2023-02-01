@@ -357,19 +357,10 @@ main( int argc, char ** argv ) {
   config.tx_ring_size = 256;
   config.completion_ring_size = 256;
 
-<<<<<<< HEAD:src/tango/tests/test_quic_server.c
-  fd_xdp_t * xdp = new_fd_xdp( intf, &config );
-
-  if( !xdp ) {
-    fprintf( stderr, "Failed to create fd_xdp. Aborting\n" );
-    exit(1);
-  }
-=======
   void * xdp_mem = aligned_alloc( fd_xdp_align(), fd_xdp_footprint( &config ) );
 
   fd_xdp_t * xdp = fd_xdp_new( xdp_mem, intf, &config );
   FD_TEST( xdp );
->>>>>>> b1501b9b (LOG_ fixes and cleanups (#93)):src/net/tests/test_quic_server.c
 
   fd_xdp_add_key( xdp, 4433 );
 
