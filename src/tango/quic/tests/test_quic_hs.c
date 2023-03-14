@@ -76,15 +76,9 @@ aio_cb( void * context, fd_aio_pkt_info_t * batch, ulong batch_sz ) {
   printf( "aio_cb callback\n" );
   for( ulong j = 0; j < batch_sz; ++j ) {
     printf( "batch %d\n", (int)j );
-<<<<<<< HEAD
-    uchar const * data = (uchar const *)batch[j].data;
-    for( ulong k = 0; k < batch[j].data_sz; ++k ) {
-      printf( "%2.2x ", (unsigned)data[k] );
-=======
     uchar const * data = (uchar const *)batch[j].buf;
     for( ulong k = 0; k < batch[j].buf_sz; ++k ) {
       printf( "%2.2x ", (uint)data[k] );
->>>>>>> 0a190804 (fixing merge)
     }
     printf( "\n\n" );
   }
