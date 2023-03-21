@@ -42,9 +42,16 @@ the necessary `sudo` access.
 - Install additional dependencies.  To simplify install and improve
   auditability, Firedancer tries to have minimal external dependencies
   and then only use external dependencies that are trivially installable
-  on recent stock Linux distributions.  Current packages used include:
+  on recent stock Linux distributions. Current packages used include:
     - pkg-config
     - xdp-tools
+    - quictls (OpenSSL)
+    - zlib
+    - zstd
+
+    ```
+    $ ./deps.sh
+    ```
 
 - Configure the host for high performance by allowing users to lock
   pages in memory and increase the scheduler priority of performance
