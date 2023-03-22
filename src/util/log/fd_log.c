@@ -517,7 +517,7 @@ fd_log_private_0( char const * fmt, ... ) {
   return fd_log_private_log_msg;
 }
 
-char const * 
+char const *
 fd_log_private_hexdump_msg ( char const * descr,
                              void const * mem,
                              ulong        sz ) {
