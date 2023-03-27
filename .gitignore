@@ -24,3 +24,12 @@ opt/
 # Vim
 *.swp
 *.swo
+
+# Certificates
+*.csr
+*.crt
+*.key
+
+# Packet Captures
+*.pcap
+*.pcapng
