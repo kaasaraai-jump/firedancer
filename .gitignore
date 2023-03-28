@@ -29,7 +29,11 @@ opt/
 *.csr
 *.crt
 *.key
+*.pem
 
 # Packet Captures
 *.pcap
 *.pcapng
+
+# Logs
+*.log
