@@ -16,12 +16,6 @@
 #define DEBUG(...)
 #endif
 
-/* FD_QUIC_DISABLE_CRYPTO: set to 1 to disable packet protection and
-   encryption.  Only intended for testing.
-   FIXME not fully implemented (#256) */
-#ifndef FD_QUIC_DISABLE_CRYPTO
-#define FD_QUIC_DISABLE_CRYPTO 0
-#endif
 
 enum {
   FD_QUIC_TYPE_INGRESS = 1 << 0,
