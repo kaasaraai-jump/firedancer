@@ -195,9 +195,6 @@ main( int argc, char ** argv ) {
     FD_LOG_INFO(( "fd_quic_stream_send returned %d", rc ));
   }
 
-<<<<<<< HEAD
-  /* allow acks to go */
-=======
   FD_LOG_NOTICE(( "Closing connections" ));
 
   fd_quic_conn_close( client_conn, 0 );
@@ -205,7 +202,6 @@ main( int argc, char ** argv ) {
 
   FD_LOG_NOTICE(( "Waiting for ACKs" ));
 
->>>>>>> e39e5cc3 (quic: update usages of API)
   for( uint j=0; j<10U; ++j ) {
     ulong ct = fd_quic_get_next_wakeup( client_quic );
     ulong st = fd_quic_get_next_wakeup( server_quic );

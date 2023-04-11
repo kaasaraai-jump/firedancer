@@ -242,10 +242,20 @@ fd_quic_config_from_env( int  *             pargc,
   return cfg;
 }
 
-FD_QUIC_API fd_aio_t const *
-fd_quic_get_aio_net_rx( fd_quic_t * quic ) {
-  fd_aio_new( &quic->aio_rx, quic, fd_quic_aio_cb_receive );
-  return &quic->aio_rx;
+FD_QUIC_API FD_FN_CONST fd_quic_callbacks_t *
+fd_quic_get_callbacks( fd_quic_t * quic ) {
+  return &quic->join.cb;
+}
+
+FD_QUIC_API FD_FN_CONST fd_quic_metrics_t const *
+fd_quic_get_metrics( fd_quic_t const * quic ) {
+  return &quic->metrics;
+}
+
+FD_QUIC_API fd_aio_t *
+fd_quic_get_aio_net_rx( fd_quic_t * quic,
+                        fd_aio_t *  aio ) {
+  return fd_aio_join( fd_aio_new( aio, quic, fd_quic_aio_cb_receive ) );
 }
 
 FD_QUIC_API void
@@ -5879,5 +5889,27 @@ fd_quic_conn_get_pkt_meta_free_count( fd_quic_conn_t * conn ) {
     pkt_meta = pkt_meta->next;
   }
   return cnt;
+}
+
+
+int
+fd_quic_aio_send( fd_quic_t *               quic,
+                  fd_aio_pkt_info_t const * batch,
+                  ulong                     batch_cnt,
+                  ulong *                   opt_batch_idx ) {
+
+  ulong _opt_batch_idx;
+  int rc = fd_aio_send( &quic->join.aio_tx, batch, batch_cnt, &_opt_batch_idx );
+
+  ulong tx_pkt_cnt;
+  if( FD_LIKELY( rc==FD_AIO_SUCCESS ) ) {
+    tx_pkt_cnt = batch_cnt;
+  } else {
+    tx_pkt_cnt = _opt_batch_idx;
+    if( opt_batch_idx ) *opt_batch_idx = _opt_batch_idx;
+  }
+
+  quic->metrics.net_tx_pkt_cnt += tx_pkt_cnt;
+  return rc;
 }
 
