@@ -5891,25 +5891,3 @@ fd_quic_conn_get_pkt_meta_free_count( fd_quic_conn_t * conn ) {
   return cnt;
 }
 
-
-int
-fd_quic_aio_send( fd_quic_t *               quic,
-                  fd_aio_pkt_info_t const * batch,
-                  ulong                     batch_cnt,
-                  ulong *                   opt_batch_idx ) {
-
-  ulong _opt_batch_idx;
-  int rc = fd_aio_send( &quic->join.aio_tx, batch, batch_cnt, &_opt_batch_idx );
-
-  ulong tx_pkt_cnt;
-  if( FD_LIKELY( rc==FD_AIO_SUCCESS ) ) {
-    tx_pkt_cnt = batch_cnt;
-  } else {
-    tx_pkt_cnt = _opt_batch_idx;
-    if( opt_batch_idx ) *opt_batch_idx = _opt_batch_idx;
-  }
-
-  quic->metrics.net_tx_pkt_cnt += tx_pkt_cnt;
-  return rc;
-}
-
