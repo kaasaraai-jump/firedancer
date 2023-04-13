@@ -63,10 +63,9 @@ int fd_tile_exec_done( fd_tile_exec_t const * exec ) { return FD_VOLATILE_CONST(
 /* Boot/halt APIs ****************************************************/
 
 void
-fd_tile_private_boot( int *    pargc,
-                      char *** pargv ) {
-  FD_LOG_INFO(( "fd_tile: booting" ));
-  
+fd_tile_private_boot_tile_count( int *    pargc,
+                                 char *** pargv ) {
+
   /* We strip the command line so there are no unexpected differences
      downstream but don't actually do anything with the results */
 
@@ -76,6 +75,14 @@ fd_tile_private_boot( int *    pargc,
   fd_tile_private_id0 = fd_log_thread_id();
   fd_tile_private_id1 = fd_tile_private_id0 + 1UL;
   fd_tile_private_cnt = 1UL;
+}
+
+void
+fd_tile_private_boot( int *    pargc,
+                      char *** pargv ) {
+  (void) pargc;
+  (void) pargv;
+  FD_LOG_INFO(( "fd_tile: booting" ));
 
   ulong app_id = fd_log_app_id();
   FD_LOG_INFO(( "fd_tile: booting thread group %lu:%lu/%lu", app_id, fd_tile_private_id0, fd_tile_private_cnt ));
