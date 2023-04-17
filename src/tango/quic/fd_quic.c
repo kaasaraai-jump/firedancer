@@ -333,7 +333,6 @@ fd_quic_init( fd_quic_t * quic ) {
   if( FD_UNLIKELY( !config->role                ) ) { FD_LOG_WARNING(( "cfg.role not set"           )); return NULL; }
   if( FD_UNLIKELY( !config->net.ip_addr         ) ) { FD_LOG_WARNING(( "no cfg.net.ip_addr"         )); return NULL; }
   if( FD_UNLIKELY( fd_ulong_load_6( config->link.src_mac_addr )==0 ) ) { FD_LOG_WARNING(( "no cfg.link.src_mac_addr" )); return NULL; }
-  if( FD_UNLIKELY( fd_ulong_load_6( config->link.dst_mac_addr )==0 ) ) { FD_LOG_WARNING(( "no cfg.link.dst_mac_addr" )); return NULL; }
   if( FD_UNLIKELY( !config->idle_timeout        ) ) { FD_LOG_WARNING(( "zero cfg.idle_timeout"      )); return NULL; }
 
   switch( config->role ) {
@@ -1147,6 +1146,10 @@ fd_quic_handle_v1_initial( fd_quic_t *               quic,
 
       /* Save peer's network endpoint */
 
+      /* FIXME: For now, just directly replying back to the source MAC
+                address. Works for all symmetric setups, which is the
+                case for most Solana validator deployments. */
+      ulong  dst_mac_addr = fd_ulong_load_6( pkt->eth->src_addr );
       uint   dst_ip_addr  = pkt->ipv4->saddr;
       ushort dst_udp_port = pkt->udp->srcport;
 
@@ -1166,6 +1169,7 @@ fd_quic_handle_v1_initial( fd_quic_t *               quic,
       conn = fd_quic_conn_create( quic,
           &new_conn_id,  /* our_conn_id */
           &peer_conn_id,
+          dst_mac_addr,
           dst_ip_addr,
           dst_udp_port,
           1,            /* server */
@@ -2675,7 +2679,8 @@ fd_quic_tls_cb_keylog( fd_quic_tls_hs_t * hs,
   fd_quic_conn_t * conn = (fd_quic_conn_t *)hs->context;
   fd_quic_t *      quic = conn->quic;
 
-  quic->cb.tls_keylog( quic->cb.quic_ctx, line );
+  if( quic->cb.tls_keylog )
+    quic->cb.tls_keylog( quic->cb.quic_ctx, line );
 }
 
 static ulong
@@ -2859,8 +2864,8 @@ fd_quic_tx_buffered( fd_quic_t *      quic,
   /* TODO much of this may be prepared ahead of time */
   fd_quic_pkt_t pkt;
 
-  fd_memcpy( pkt.eth->dst_addr, quic->config.link.dst_mac_addr, sizeof( pkt.eth->dst_addr ) );
-  fd_memcpy( pkt.eth->src_addr, quic->config.link.src_mac_addr, sizeof( pkt.eth->src_addr ) );
+  memcpy( pkt.eth->dst_addr, peer->mac_addr,                 6 );
+  memcpy( pkt.eth->src_addr, quic->config.link.src_mac_addr, 6 );
   pkt.eth->eth_type = 0x0800;
 
   pkt.ipv4->version  = 4;
@@ -4242,6 +4247,7 @@ fd_quic_connect( fd_quic_t *  quic,
       quic,
       &our_conn_id,
       &peer_conn_id,
+      fd_ulong_load_6( quic->config.link.dst_mac_addr ),
       dst_ip_addr,
       dst_udp_port,
       0, /* client */
@@ -4410,6 +4416,7 @@ fd_quic_conn_t *
 fd_quic_conn_create( fd_quic_t *               quic,
                      fd_quic_conn_id_t const * our_conn_id,
                      fd_quic_conn_id_t const * peer_conn_id,
+                     ulong                     dst_mac_addr,
                      uint                      dst_ip_addr,
                      ushort                    dst_udp_port,
                      int                       server,
@@ -4593,6 +4600,7 @@ fd_quic_conn_create( fd_quic_t *               quic,
   conn->peer[ peer_idx ].conn_id      = *peer_conn_id;
   conn->peer[ peer_idx ].net.ip_addr  = dst_ip_addr;
   conn->peer[ peer_idx ].net.udp_port = dst_udp_port;
+  memcpy( &conn->peer[ peer_idx ].mac_addr, &dst_mac_addr, 6 );
   conn->peer_cnt                    = 1;
 
   /* initialize other ack members */
