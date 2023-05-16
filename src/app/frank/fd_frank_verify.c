@@ -9,7 +9,7 @@ fd_frank_verify_task( int     argc,
   fd_log_thread_set( argv[0] );
   char const * verify_name = argv[0];
   FD_LOG_INFO(( "verify.%s init", verify_name ));
-  
+
   /* Parse "command line" arguments */
 
   char const * pod_gaddr = argv[1];
@@ -188,13 +188,28 @@ fd_frank_verify_task( int     argc,
       continue;
     }
 
-    /* Placeholder for sig verify */
-    (void)_tcache_map;
-    (void)_tcache_ring;
-    (void)tcache_depth;
-    (void)tcache_map_cnt;
-    (void)chunk;
-    (void)wmark;
+    /* See if there are any transactions waiting to be packed */
+    __m128i vin_seq_sig = fd_frag_meta_seq_sig_query( vin_mline );
+    ulong vin_seq_found = fd_frag_meta_sse0_seq( vin_seq_sig );
+    long  vin_diff      = fd_seq_diff( vin_seq_found, vin_mcache_seq );
+    if( FD_UNLIKELY( vin_diff ) ) { /* caught up or overrun, optimize for expected sequence number ready */
+      if( FD_LIKELY( vin_diff < 0L ) ) {
+        FD_SPIN_PAUSE();
+        now = fd_tickcount();
+        continue;
+      }
+      vin_accum_ovrnp_cnt++;
+      vin_mcache_seq = vin_seq_found;
+      /* can keep processing from the new seq */
+    }
+
+    ulong vin_sig_found = fd_frag_meta_sse0_sig( vin_seq_sig );
+    if( FD_UNLIKELY( vin_sig_found ) ) { /* This is a dummy mcache entry to keep frags from getting overrun, do not process */
+      vin_mcache_seq   = fd_seq_inc( vin_mcache_seq, 1UL );
+      vin_mline = vin_mcache + fd_mcache_line_idx( vin_mcache_seq, vin_mcache_depth );
+      continue;
+    }
+
     now = fd_tickcount();
 
   }
