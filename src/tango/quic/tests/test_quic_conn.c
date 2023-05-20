@@ -34,8 +34,7 @@ populate_stream_meta( ulong sz ) {
     meta->stream = NULL;
     meta->next   = NULL;
     if( !prev ) {
-      meta_free = meta;
-    } else {
+      meta_free = meta; } else {
       prev->next  = meta;
     }
 
@@ -498,4 +497,3 @@ main( int argc, char ** argv ) {
   fd_halt();
   return 0;
 }
-

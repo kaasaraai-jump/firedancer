@@ -219,6 +219,9 @@ struct __attribute__((aligned(16UL))) fd_quic_config {
      Also sent to peer via max_idle_timeout transport param */
   ulong idle_timeout;
 
+   /* retry: whether address validation using retry packets is enabled (RFC 9000, Section 8.1.2) */
+  int retry;
+
   /* TLS config ********************************************/
 
   /* cstrs containing TLS PEM cert and key file path */

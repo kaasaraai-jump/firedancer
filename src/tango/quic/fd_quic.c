@@ -1085,7 +1085,7 @@ fd_quic_handle_v1_initial( fd_quic_t *               quic,
      choose their own "conn ID" (more like a peer ID) and indirectly
      instruct the other peer to be addressed as such via the dest conn
      ID field.  However, when the client sends the first packet, it
-     doesn't know the preferred dest conn ID to pick for the server.
+     doesn't know the preferred dest conn ID to pick for the se
      Thus, the client picks a random dest conn ID -- which is referred
      to as "original dest conn ID". */
 
@@ -1164,6 +1164,41 @@ fd_quic_handle_v1_initial( fd_quic_t *               quic,
         /* FIXME this should already have been checked */
         FD_LOG_WARNING(( "Unsupported version reached fd_quic_handle_v1_initial" ));
         return FD_QUIC_PARSE_FAIL;
+      }
+      
+      /* Handle retry if configured. */
+      if (quic->config.retry)
+      {
+        /* This is the initial packet before retry. */
+        if (initial->token_len == 0)
+        {
+          fd_quic_transport_params_t * tp = &state->transport_params;
+          tp->retry_source_connection_id_len = orig_conn_id.sz;
+          memcpy(tp->retry_source_connection_id,
+                 orig_conn_id.conn_id,
+                 orig_conn_id.sz);
+
+          fd_quic_retry_t retry_pkt;
+          retry_pkt.hdr_form = 1;
+          retry_pkt.fixed_bit = 1;
+          retry_pkt.long_packet_type = 3;
+          retry_pkt.version = 1;
+          retry_pkt.dst_conn_id_len = pkt->long_hdr->src_conn_id_len;
+          memcpy(retry_pkt.dst_conn_id, pkt->long_hdr->src_conn_id, retry_pkt.dst_conn_id_len);
+          retry_pkt.src_conn_id_len = FD_QUIC_CONN_ID_SZ;
+          memcpy(retry_pkt.src_conn_id, pkt->long_hdr->src_conn_id, retry_pkt.src_conn_id_len);
+
+          
+        }
+        /* This is the initial packet _after_ retry, i.e. the client's response to retry (which is
+           also an initial packet). */
+        else
+        {
+
+        }
+
+        FD_LOG_NOTICE(("initial token %d", initial->token_len));
+        FD_LOG_HEXDUMP_NOTICE(("token", initial->token, initial->token_len));
       }
 
       /* Allocate new conn */
@@ -1269,7 +1304,7 @@ fd_quic_handle_v1_initial( fd_quic_t *               quic,
       if( FD_UNLIKELY( FD_QUIC_SUCCESS!=fd_quic_gen_initial_secret(
               &conn->secrets,
               initial_salt,         initial_salt_sz,
-              orig_conn_id.conn_id, conn_id->sz ) ) ) {
+              orig_conn_id.conn_id, orig_conn_id.sz ) ) ) {
         DEBUG( FD_LOG_DEBUG(( "fd_quic_gen_initial_secret failed" )); )
         conn->state = FD_QUIC_CONN_STATE_DEAD;
         return FD_QUIC_PARSE_FAIL;
@@ -2960,6 +2995,7 @@ struct fd_quic_pkt_hdr {
     fd_quic_initial_t   initial;
     fd_quic_handshake_t handshake;
     fd_quic_one_rtt_t   one_rtt;
+    fd_quic_retry_t     retry;
     /* don't currently support early data */
   } quic_pkt;
   uint enc_level; /* implies the type of quic_pkt */
@@ -3065,7 +3101,6 @@ fd_quic_pkt_hdr_populate( fd_quic_pkt_hdr_t * pkt_hdr,
       FD_LOG_ERR(( "%s - logic error: unexpected enc_level", __func__ ));
   }
 }
-
 
 /* set the payload size within the packet header */
 void
@@ -3883,11 +3918,10 @@ fd_quic_conn_tx( fd_quic_t * quic, fd_quic_conn_t * conn ) {
        payload */
     ulong act_hdr_sz = fd_quic_pkt_hdr_footprint( &pkt_hdr, enc_level );
 
-    cur_ptr += initial_hdr_sz + 3u - act_hdr_sz;
-
     /* encode packet header into buffer
        allow `initial_hdr_sz + 3` space for the header... as the payload bytes
        start there */
+    cur_ptr += initial_hdr_sz + 3u - act_hdr_sz;
     ulong rc = fd_quic_pkt_hdr_encode( cur_ptr, act_hdr_sz, &pkt_hdr, enc_level );
 
     if( FD_UNLIKELY( rc == FD_QUIC_PARSE_FAIL ) ) {
