@@ -643,8 +643,6 @@ fd_quic_stream_fin( fd_quic_stream_t * stream );
 FD_PROTOTYPES_END
 
 /* Convenience exports for consumers of API */
-int test_retry_integrity_tag();
-
 #include "fd_quic_conn.h"
 #include "fd_quic_stream.h"
 
