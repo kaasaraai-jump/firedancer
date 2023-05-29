@@ -22,6 +22,8 @@ struct fd_quic_conn_layout {
   ulong stream_map_off;
   ulong pkt_meta_off;
   ulong ack_off;
+  ulong token_len_off;
+  ulong token_off;
 };
 typedef struct fd_quic_conn_layout fd_quic_conn_layout_t;
 
@@ -97,6 +99,15 @@ fd_quic_conn_footprint_ext( fd_quic_limits_t const * limits,
   off                   = fd_ulong_align_up( off, alignof(fd_quic_ack_t) );
   layout->ack_off       = off;
   off                  += inflight_pkt_cnt * sizeof(fd_quic_ack_t);
+
+  off                   = fd_ulong_align_up( off, alignof(ulong) );
+  layout->token_len_off = off;
+  off                  += sizeof(ulong);
+
+  /* allocate space for token (RETRY and NEW_TOKEN) */
+  off                   = fd_ulong_align_up( off, alignof(uchar) );
+  layout->token_off     = off;
+  off                  += FD_QUIC_TOKEN_SZ_MAX;
 
   /* align total footprint */
   off = fd_ulong_align_up( off, fd_quic_conn_align() );
@@ -227,4 +238,3 @@ void *
 fd_quic_conn_get_context( fd_quic_conn_t * conn ) {
   return conn->context;
 }
-

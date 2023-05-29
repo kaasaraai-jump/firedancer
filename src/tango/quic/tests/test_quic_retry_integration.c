@@ -99,7 +99,6 @@ main( int argc, char ** argv ) {
 
   FD_LOG_NOTICE(( "Creating server QUIC" ));
   fd_quic_t * server_quic = fd_quic_new_anonymous( wksp, &quic_limits, FD_QUIC_ROLE_SERVER );
-  server_quic->config.retry = 1;
   FD_TEST( server_quic );
 
   FD_LOG_NOTICE(( "Creating client QUIC" ));
@@ -120,6 +119,8 @@ main( int argc, char ** argv ) {
   FD_LOG_NOTICE(( "Initializing QUICs" ));
   FD_TEST( fd_quic_init( server_quic ) );
   FD_TEST( fd_quic_init( client_quic ) );
+
+  server_quic->config.retry = 1;
 
   FD_LOG_NOTICE(( "Creating connection" ));
   fd_quic_conn_t * client_conn = fd_quic_connect(
@@ -152,6 +153,52 @@ main( int argc, char ** argv ) {
     }
   }
 
+  /* TODO we get callback before the call to fd_quic_conn_new_stream can complete
+     must delay until the conn->state is ACTIVE */
+
+  FD_LOG_NOTICE(( "Creating streams" ));
+
+  fd_quic_stream_t * client_stream   = fd_quic_conn_new_stream( client_conn, FD_QUIC_TYPE_UNIDIR );
+  FD_TEST( client_stream );
+
+  fd_quic_stream_t * client_stream_0 = fd_quic_conn_new_stream( client_conn, FD_QUIC_TYPE_UNIDIR );
+  FD_TEST( client_stream_0 );
+
+  FD_LOG_NOTICE(( "Sending data over streams" ));
+
+  char buf[512] = "Hello world!\x00-   ";
+  fd_aio_pkt_info_t batch[1] = {{ buf, sizeof( buf ) }};
+
+  for( unsigned j = 0; j < 16; ++j ) {
+    ulong ct = fd_quic_get_next_wakeup( client_quic );
+    ulong st = fd_quic_get_next_wakeup( server_quic );
+    ulong next_wakeup = fd_ulong_min( ct, st );
+
+    if( next_wakeup == ~(ulong)0 ) {
+      FD_LOG_INFO(( "client and server have no schedule" ));
+      break;
+    }
+
+    if( next_wakeup > now ) now = next_wakeup;
+
+    FD_LOG_INFO(( "running services at %lu", (ulong)next_wakeup ));
+
+    fd_quic_service( client_quic );
+    fd_quic_service( server_quic );
+
+    buf[12] = ' ';
+    //buf[15] = (char)( ( j / 10 ) + '0' );
+    buf[16] = (char)( ( j % 10 ) + '0' );
+    int rc = 0;
+    if( j&1 ) {
+      rc = fd_quic_stream_send( client_stream,   batch, 1, 0 );
+    } else {
+      rc = fd_quic_stream_send( client_stream_0, batch, 1, 0 );
+    }
+
+    FD_LOG_INFO(( "fd_quic_stream_send returned %d", rc ));
+  }
+
   FD_LOG_NOTICE(( "Closing connections" ));
 
   fd_quic_conn_close( client_conn, 0 );
@@ -177,6 +224,7 @@ main( int argc, char ** argv ) {
     fd_quic_service( client_quic );
     fd_quic_service( server_quic );
   }
+
 
   FD_LOG_NOTICE(( "Cleaning up" ));
   fd_quic_virtual_pair_fini( &vp );

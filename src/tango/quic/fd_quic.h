@@ -113,6 +113,13 @@
 #define FD_QUIC_INITIAL_PAYLOAD_SZ_MIN (1200)
 #define FD_QUIC_INITIAL_PAYLOAD_SZ_MAX (FD_QUIC_INITIAL_PAYLOAD_SZ_MIN)
 
+/* Tokens (both RETRY and NEW_TOKEN) are specified by varints. We bound it to
+   512 bytes. */
+#define FD_QUIC_TOKEN_SZ_MAX (512)
+/* Retry packets don't carry a token length field, so we infer it from the
+   footprint of a packet with a zero-length token and zero-length conn ids. */
+#define FD_QUIC_EMPTY_RETRY_PKT_SZ (23)
+
 /* FD_QUIC_MAX_PAYLOAD_SZ is the max byte size of the UDP payload of any
    QUIC packets.  Derived from FD_QUIC_MTU by subtracting the typical
    IPv4 header (no options) and UDP header sizes. */
@@ -642,6 +649,20 @@ fd_quic_stream_fin( fd_quic_stream_t * stream );
 /* TODO: fd_quic_stream_close */
 //void
 //fd_quic_stream_close( fd_quic_stream_t * stream, int direction_flags );
+
+uint fd_quic_tx_buffered_raw(fd_quic_t *quic,
+                             uchar **tx_ptr_ptr,
+                             uchar *tx_buf,
+                             ulong tx_buf_sz,
+                             ulong *tx_sz,
+                             uchar *crypt_scratch,
+                             ulong crypt_scratch_sz,
+                             uchar *dst_mac_addr,
+                             ushort *ipv4_id,
+                             uint dst_ipv4_addr,
+                             ushort src_udp_port,
+                             ushort dst_udp_port,
+                             int flush);
 
 FD_PROTOTYPES_END
 

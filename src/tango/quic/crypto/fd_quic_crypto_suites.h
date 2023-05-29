@@ -183,8 +183,10 @@ extern uchar FD_QUIC_CRYPTO_V1_INITIAL_SALT[ 20UL ];
 /* HKFD application-specific context (similar to a salt) */
 #define FD_QUIC_RETRY_TOKEN_AEAD_INFO ((const uchar *)"fd quic retry token")
 #define FD_QUIC_RETRY_TOKEN_AEAD_INFO_SZ (sizeof("fd quic retry token") - 1)
+/* Retry token lifetime */
+#define FD_QUIC_RETRY_TOKEN_LIFETIME 15 * 1e9
 /* The retry integrity tag is the 16-byte tag output of AES-128-GCM */
-#define FD_QUIC_RETRY_INTEGRITY_TAG_SZ 16
+#define FD_QUIC_RETRY_INTEGRITY_TAG_SZ FD_QUIC_CRYPTO_TAG_SZ
 #define FD_QUIC_RETRY_INTEGRITY_TAG_KEY ((uchar *)"\xbe\x0c\x69\x0b\x9f\x66\x57\x5a\x1d\x76\x6b\x54\xe3\x68\xc8\x4e")
 #define FD_QUIC_RETRY_INTEGRITY_TAG_NONCE ((uchar *)"\x46\x15\x99\xd3\x5d\x63\x2b\xf2\x23\x98\x25\xbb")
 
