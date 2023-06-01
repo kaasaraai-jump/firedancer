@@ -874,11 +874,6 @@ int fd_quic_retry_token_encrypt(
     FD_LOG_WARNING(("Expected ciphertext length to equal plaintext length. Instead got: %d", ciphertext_len));
     return FD_QUIC_FAILED;
   }
-  // FD_LOG_HEXDUMP_NOTICE( ( "hkdf_key", hkdf_key, FD_QUIC_RETRY_TOKEN_HKDF_KEY_SZ ));
-  // FD_LOG_HEXDUMP_NOTICE( ( "ciphertext", ciphertext, FD_QUIC_RETRY_TOKEN_CIPHERTEXT_SZ ));
-  // FD_LOG_HEXDUMP_NOTICE( ( "tag", tag, FD_QUIC_CRYPTO_TAG_SZ ));
-  // FD_LOG_HEXDUMP_NOTICE( ( "aead_key", aead_key, FD_QUIC_RETRY_TOKEN_AEAD_KEY_SZ ) );
-  // FD_LOG_HEXDUMP_NOTICE( ( "iv", iv, FD_QUIC_NONCE_SZ ) );
   return FD_QUIC_SUCCESS;
 }
 
@@ -910,11 +905,6 @@ int fd_quic_retry_token_decrypt(
   uchar iv[FD_QUIC_NONCE_SZ] = {0};
   uchar *tag = ciphertext + FD_QUIC_RETRY_TOKEN_CIPHERTEXT_SZ;
   uchar plaintext[FD_QUIC_RETRY_TOKEN_PLAINTEXT_SZ];
-  // FD_LOG_HEXDUMP_NOTICE( ( "hkdf_key", hkdf_key, FD_QUIC_RETRY_TOKEN_HKDF_KEY_SZ ));
-  // FD_LOG_HEXDUMP_NOTICE( ( "ciphertext", ciphertext, FD_QUIC_RETRY_TOKEN_CIPHERTEXT_SZ ));
-  // FD_LOG_HEXDUMP_NOTICE( ( "tag", tag, FD_QUIC_CRYPTO_TAG_SZ ));
-  // FD_LOG_HEXDUMP_NOTICE( ( "aead_key", aead_key, FD_QUIC_RETRY_TOKEN_AEAD_KEY_SZ ));
-  // FD_LOG_HEXDUMP_NOTICE( ( "iv", iv, FD_QUIC_NONCE_SZ ));
   if (FD_UNLIKELY(gcm_decrypt(EVP_aes_256_gcm(),
                               ciphertext, FD_QUIC_RETRY_TOKEN_CIPHERTEXT_SZ,
                               aad, (int) aad_sz,

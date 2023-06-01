@@ -48,7 +48,6 @@ void test_retry_token_encrypt_decrypt()
   fd_quic_net_endpoint_t client = {.ip_addr = 0x7f000001, .udp_port = 9000};
   uchar retry_token[FD_QUIC_RETRY_TOKEN_SZ];
   ulong now = (ulong)fd_log_wallclock();
-  FD_LOG_NOTICE(("now %lu", now));
 
   for (int i = 0; i < NUM_TEST_CASES; i++)
   {
@@ -119,9 +118,10 @@ void test_retry_integrity_tag()
   uchar buf_[sz];
   fd_quic_encode_retry_pseudo(buf_, sz, &retry_pseudo_pkt);
 
-  // FIXME variable-length encodings without len field
-  // FIXME hack around it by using 100-byte retry tokens -- but this sample uses a 5-byte token
-  sz -= 95;
+  /* This is a hack to get our retry packet to encrypt exactly like the example
+     given in the RFC. In practice, it doesn't matter because the token is
+     opaque. */
+  sz -= (FD_QUIC_TOKEN_SZ_MAX - 5);
   uchar buf[sz];
   memcpy(buf, buf_, sz);
 
@@ -160,7 +160,7 @@ int main(int argc,
     FD_LOG_ERR(("unrecognized argument: %s", argv[1]));
 
   test_retry_token_encrypt_decrypt();
-  // test_retry_integrity_tag();
+  test_retry_integrity_tag();
 
   FD_LOG_NOTICE(("pass"));
   fd_halt();

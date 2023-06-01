@@ -1311,14 +1311,7 @@ fd_quic_handle_v1_initial( fd_quic_t *               quic,
           // TODO can make this more efficient by directly manipulating the retry_pkt pkt
           // bytes directly: prepending the ODCID and removing the retry_pkt integrity tag
 
-          // TODO zero-copy
-          // uchar **retry_pseudo_pkt_odcid = &retry_pseudo_pkt.odcid;
-          // *retry_pseudo_pkt_odcid = &orig_dst_conn_id.conn_id;
-          // uchar **retry_pseudo_pkt_dst_conn_id = &retry_pseudo_pkt.dst_conn_id;
-          // *retry_pseudo_pkt_dst_conn_id = &retry_pkt.dst_conn_id;
-          // uchar **retry_pseudo_pkt_src_conn_id = &retry_pseudo_pkt.src_conn_id;
-          // *retry_pseudo_pkt_src_conn_id = &retry_pkt.src_conn_id;
-
+          // TODO zero-copy?
           memcpy(&retry_pseudo_pkt.odcid, &orig_dst_conn_id.conn_id, orig_dst_conn_id.sz);
           memcpy(&retry_pseudo_pkt.dst_conn_id, &retry_pkt.dst_conn_id, retry_pkt.dst_conn_id_len);
           memcpy(&retry_pseudo_pkt.src_conn_id, &retry_pkt.src_conn_id, retry_pkt.src_conn_id_len);
@@ -1329,30 +1322,12 @@ fd_quic_handle_v1_initial( fd_quic_t *               quic,
           fd_quic_encode_retry_pseudo(retry_pseudo_buf, retry_pseudo_footprint, &retry_pseudo_pkt);
           fd_quic_retry_integrity_tag_encrypt(retry_pseudo_buf, (int) retry_pseudo_footprint, retry_pkt.retry_integrity_tag);
 
-          // sz -= 95;
-          // uchar buf[sz];
-          // memcpy(buf, buf_, sz);
-
-          // uchar retry_integrity_tag_actual[16];
-          // uchar retry_token_hack[5] = "\x74\x6f\x6b\x65\x6e";
-
-          // memcpy(retry_pkt.retry_token, retry_token_hack, retry_pkt.src_conn_id_len);
-          // memcpy(retry_pkt.retry_integrity_tag, retry_integrity_tag_actual, 16);
-
           ulong tx_buf_sz = fd_quic_encode_footprint_retry(&retry_pkt);
           uchar tx_buf[tx_buf_sz];
           fd_quic_encode_retry(tx_buf, tx_buf_sz, &retry_pkt);
           uchar *tx_ptr = tx_buf + tx_buf_sz;
           ulong tx_sz = 0;  // no space remaining after encoding
-          // if (FD_UNLIKELY(encoded_sz != tx_sz)) {
-          //   FD_LOG_WARNING(("Error serializing retry packet. Footprint (%lu) did not match encoding (%lu).", tx_sz, encoded_sz));
-          //   return FD_QUIC_FAILED;
-          // }
           uchar encode_buf[2048];  // space for lower-layer headers, same size as crypt_scratch
-          // FD_LOG_HEXDUMP_NOTICE(("retry", (uchar *) tx_buf, tx_buf_sz));
-          // FD_LOG_HEXDUMP_NOTICE( ( "retry token before", retry_pkt.retry_token, FD_QUIC_RETRY_TOKEN_SZ ));
-          // FD_LOG_HEXDUMP_NOTICE(("dst_ip_addr", &dst_ip_addr, 4));
-          // FD_LOG_HEXDUMP_NOTICE(("dst_udp_port", &dst_udp_port, 2));
           if (FD_UNLIKELY( fd_quic_tx_buffered_raw(
             quic,
             // these are state variable's normally updated on a conn, but irrelevant in retry so we
@@ -1389,21 +1364,17 @@ fd_quic_handle_v1_initial( fd_quic_t *               quic,
         retry_src_conn_id.sz = initial->dst_conn_id_len;
         memcpy(&retry_src_conn_id.conn_id, initial->dst_conn_id, initial->dst_conn_id_len);
 
-        fd_quic_conn_id_t orig_dst_conn_id;
+        fd_quic_conn_id_t retry_odcid;
         ulong issued;
-        // FD_LOG_HEXDUMP_NOTICE(("retry token after", initial->token, initial->token_len));
-        // FD_LOG_HEXDUMP_NOTICE(("dst_ip_addr", &dst_ip_addr, 4));
-        // FD_LOG_HEXDUMP_NOTICE(("dst_udp_port", &dst_udp_port, 2));
-        // uchar *token = (uchar *) "\x46\xdd\x85\xf8\x6f\x17\xa2\xd1\x3a\x4f\x1f\x10\x8c\x1e\xde\xd7\x79\x3e\x01\x4d\xd0\x90\x07\xc6\xe7\x9a\xd9\x87\x09\xa7\x5c\xfa\x0a\x4a\xc1\xfb\xa7\x92\x5a\xa0\x38\xfa\x18\x4f\x5c\x0e\x87\xb5\xe6\x88\xe2\x03\x00\xcf\x77\xbb\x8e\x99\xab\xa0\xa0\x5a\xa1\xc8\xf3\x82\x6c\x59\x1b\xaf\x05\xaa\xe3\xbe\x18\x2c\xf7";
-
-        // fd_quic_net_endpoint_t client = {.ip_addr = 0x7f000001, .udp_port = 9000};
-        // fd_quic_conn_id_t retry_ = {.sz = 8, .conn_id = "\x42\x41\x40\x3F\x3E\x3D\x3C\x3B"};
-        if (FD_UNLIKELY(fd_quic_retry_token_decrypt(initial->token, &retry_src_conn_id, dst_ip_addr, dst_udp_port, &orig_dst_conn_id, &issued))) {
+        if (FD_UNLIKELY(fd_quic_retry_token_decrypt((uchar *) initial->token, &retry_src_conn_id, dst_ip_addr, dst_udp_port, &retry_odcid, &issued))) {
           return FD_QUIC_PARSE_FAIL;
         };
+        tp->original_destination_connection_id_len     = retry_odcid.sz;
+        fd_memcpy( state->transport_params.original_destination_connection_id,
+          retry_odcid.conn_id,
+          retry_odcid.sz );
         ulong now = fd_quic_now(quic);
         if (now < issued || (now - issued) > FD_QUIC_RETRY_TOKEN_LIFETIME) {
-          FD_LOG_NOTICE(("returning %lu %lu", now, issued));
           return FD_QUIC_PARSE_FAIL;
         }
       }
@@ -1822,13 +1793,12 @@ ulong fd_quic_handle_v1_retry(
     ulong                 cur_sz
 ) {
   (void)pkt;
-  // (void)conn;
   fd_quic_retry_t retry_pkt;
   fd_quic_decode_retry(&retry_pkt, cur_ptr, cur_sz);
 
   fd_quic_conn_id_t * orig_dst_conn_id = &conn->peer->conn_id;
 
-  /* Validate the Retry Integrity Tag */
+  /* Validate the Retry Integrity Tag. TODO can we make this more efficient? */
   fd_quic_retry_pseudo_t retry_pseudo_pkt = {
       .odcid_len        = orig_dst_conn_id->sz,
       // .odcid
@@ -1843,8 +1813,9 @@ ulong fd_quic_handle_v1_retry(
       // .src_conn_id      = retry_pkt.src_conn_id,
       // .retry_token
   };
-  // TODO can make this more efficient by directly manipulating the retry_pkt pkt
-  // bytes directly: prepending the ODCID and removing the retry_pkt integrity tag
+
+  /* Retry-pseudo packet is the retry packet with ODCID prepended and integrity
+     tag removed*/
   memcpy( retry_pseudo_pkt.odcid, orig_dst_conn_id->conn_id, orig_dst_conn_id->sz );
   memcpy( retry_pseudo_pkt.dst_conn_id, retry_pkt.dst_conn_id, retry_pkt.dst_conn_id_len );
   memcpy( retry_pseudo_pkt.src_conn_id, retry_pkt.src_conn_id, retry_pkt.src_conn_id_len );
@@ -1884,8 +1855,9 @@ ulong fd_quic_handle_v1_retry(
     conn->state = FD_QUIC_CONN_STATE_DEAD;
     return FD_QUIC_PARSE_FAIL;
   }
+  /* The token length is the remaining bytes in the retry packet after subtracting known fields. */
   conn->token_len = cur_sz - FD_QUIC_EMPTY_RETRY_PKT_SZ - retry_pkt.src_conn_id_len - retry_pkt.dst_conn_id_len;
-  memcpy(&conn->token, retry_pkt.retry_token, conn->token_len);  // FIXME
+  memcpy(&conn->token, retry_pkt.retry_token, conn->token_len);
 
   return cur_sz;
 }
@@ -3072,7 +3044,6 @@ fd_quic_service( fd_quic_t * quic ) {
    and put on the wire
 
    returns 0 if successful, or 1 otherwise */
-// TODO inline?
 uint fd_quic_tx_buffered_raw(fd_quic_t *quic,
                              uchar **tx_ptr_ptr,
                              uchar *tx_buf,
@@ -3258,7 +3229,6 @@ fd_quic_pkt_hdr_populate( fd_quic_pkt_hdr_t * pkt_hdr,
       // .dst_conn_id
       pkt_hdr->quic_pkt.initial.src_conn_id_len  = conn_id->sz;
       // .src_conn_id
-      pkt_hdr->quic_pkt.initial.token_len        = (uchar) conn->token_len;
       // .token
       pkt_hdr->quic_pkt.initial.len              = 0;  /* length of payload initially 0 */
       pkt_hdr->quic_pkt.initial.pkt_num          = pkt_number;
@@ -3270,9 +3240,10 @@ fd_quic_pkt_hdr_populate( fd_quic_pkt_hdr_t * pkt_hdr,
               conn_id->conn_id,
               conn_id->sz );
 
-      if (conn->token_len) {
-        pkt_hdr->quic_pkt.initial.token_len       = (uchar) conn->token_len;
-        memcpy( &pkt_hdr->quic_pkt.initial.token, &conn->token, FD_QUIC_RETRY_TOKEN_SZ ); // FIXME
+      /* Initial packets sent by the server MUST set the Token Length field to 0. */
+      if ( conn->quic->config.role == FD_QUIC_ROLE_CLIENT && conn->token_len ) {
+        pkt_hdr->quic_pkt.initial.token_len       = conn->token_len;
+        memcpy( &pkt_hdr->quic_pkt.initial.token, &conn->token, conn->token_len );
       } else {
         pkt_hdr->quic_pkt.initial.token_len       = 0;
       }
@@ -3360,7 +3331,7 @@ fd_quic_pkt_hdr_set_payload_sz( fd_quic_pkt_hdr_t * pkt_hdr, uint enc_level, uin
 ulong
 fd_quic_pkt_hdr_footprint( fd_quic_pkt_hdr_t * pkt_hdr, uint enc_level ) {
   switch( enc_level ) {
-    case fd_quic_enc_level_initial_id:
+    case fd_quic_enc_level_initial_id:;
       return fd_quic_encode_footprint_initial( &pkt_hdr->quic_pkt.initial );
     case fd_quic_enc_level_handshake_id:
       return fd_quic_encode_footprint_handshake( &pkt_hdr->quic_pkt.handshake );
@@ -3376,7 +3347,7 @@ fd_quic_pkt_hdr_footprint( fd_quic_pkt_hdr_t * pkt_hdr, uint enc_level ) {
 ulong
 fd_quic_pkt_hdr_encode( uchar * cur_ptr, ulong cur_sz, fd_quic_pkt_hdr_t * pkt_hdr, uint enc_level ) {
   switch( enc_level ) {
-    case fd_quic_enc_level_initial_id:
+    case fd_quic_enc_level_initial_id:;
       return fd_quic_encode_initial( cur_ptr, cur_sz, &pkt_hdr->quic_pkt.initial );
     case fd_quic_enc_level_handshake_id:
       return fd_quic_encode_handshake( cur_ptr, cur_sz, &pkt_hdr->quic_pkt.handshake );

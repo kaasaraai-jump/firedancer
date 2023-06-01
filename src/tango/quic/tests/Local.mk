@@ -30,5 +30,6 @@ $(call run-unit-test,test_quic_handshake)
 $(call run-unit-test,test_quic_crypto)
 $(call run-unit-test,test_quic_frames)
 $(call run-unit-test,test_quic_retry_unit)
+$(call run-unit-test,test_quic_retry_integration)
 endif
 endif

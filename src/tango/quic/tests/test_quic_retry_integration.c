@@ -108,6 +108,7 @@ main( int argc, char ** argv ) {
   server_quic->cb.now              = test_clock;
   server_quic->cb.conn_new         = my_connection_new;
   server_quic->cb.stream_receive   = my_stream_receive_cb;
+  server_quic->config.retry = 1;
 
   client_quic->cb.now              = test_clock;
   client_quic->cb.conn_hs_complete = my_handshake_complete;
@@ -119,8 +120,6 @@ main( int argc, char ** argv ) {
   FD_LOG_NOTICE(( "Initializing QUICs" ));
   FD_TEST( fd_quic_init( server_quic ) );
   FD_TEST( fd_quic_init( client_quic ) );
-
-  server_quic->config.retry = 1;
 
   FD_LOG_NOTICE(( "Creating connection" ));
   fd_quic_conn_t * client_conn = fd_quic_connect(
@@ -224,7 +223,6 @@ main( int argc, char ** argv ) {
     fd_quic_service( client_quic );
     fd_quic_service( server_quic );
   }
-
 
   FD_LOG_NOTICE(( "Cleaning up" ));
   fd_quic_virtual_pair_fini( &vp );

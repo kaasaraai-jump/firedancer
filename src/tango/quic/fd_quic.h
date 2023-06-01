@@ -114,8 +114,11 @@
 #define FD_QUIC_INITIAL_PAYLOAD_SZ_MAX (FD_QUIC_INITIAL_PAYLOAD_SZ_MIN)
 
 /* Tokens (both RETRY and NEW_TOKEN) are specified by varints. We bound it to
-   512 bytes. */
-#define FD_QUIC_TOKEN_SZ_MAX (512)
+   77 bytes. Both our and quinn's RETRY tokens are 77 bytes, but our client
+   needs to be able to handle other server impl's of RETRY too.
+
+   FIXME change this bound (requires variable-length encoding). */
+#define FD_QUIC_TOKEN_SZ_MAX (77)
 /* Retry packets don't carry a token length field, so we infer it from the
    footprint of a packet with a zero-length token and zero-length conn ids. */
 #define FD_QUIC_EMPTY_RETRY_PKT_SZ (23)

@@ -225,7 +225,6 @@ fd_quic_conn_new( void *                   mem,
   return conn;
 }
 
-
 /* set the user-defined context value on the connection */
 void
 fd_quic_conn_set_context( fd_quic_conn_t * conn, void * context ) {
@@ -238,3 +237,4 @@ void *
 fd_quic_conn_get_context( fd_quic_conn_t * conn ) {
   return conn->context;
 }
+
