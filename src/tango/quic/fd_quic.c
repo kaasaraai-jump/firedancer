@@ -242,20 +242,10 @@ fd_quic_config_from_env( int  *             pargc,
   return cfg;
 }
 
-FD_QUIC_API FD_FN_CONST fd_quic_callbacks_t *
-fd_quic_get_callbacks( fd_quic_t * quic ) {
-  return &quic->join.cb;
-}
-
-FD_QUIC_API FD_FN_CONST fd_quic_metrics_t const *
-fd_quic_get_metrics( fd_quic_t const * quic ) {
-  return &quic->metrics;
-}
-
-FD_QUIC_API fd_aio_t *
-fd_quic_get_aio_net_rx( fd_quic_t * quic,
-                        fd_aio_t *  aio ) {
-  return fd_aio_join( fd_aio_new( aio, quic, fd_quic_aio_cb_receive ) );
+FD_QUIC_API fd_aio_t const *
+fd_quic_get_aio_net_rx( fd_quic_t * quic ) {
+  fd_aio_new( &quic->aio_rx, quic, fd_quic_aio_cb_receive );
+  return &quic->aio_rx;
 }
 
 FD_QUIC_API void
@@ -1830,7 +1820,7 @@ fd_quic_handle_v1_one_rtt( fd_quic_t * quic, fd_quic_conn_t * conn, fd_quic_pkt_
       FD_LOG_DEBUG(( "key update started" ));
 
       /* generate new secrets */
-      if( fd_quic_gen_new_secrets( &conn->secrets, suite->hash ) != FD_QUIC_SUCCESS ) {
+      if( fd_quic_gen_new_secrets( &conn->secrets, suite->hmac_fn, suite->hash_sz ) != FD_QUIC_SUCCESS ) {
         FD_LOG_WARNING(( "Unable to generate new secrets for key update. "
               "Aborting connection" ));
         fd_quic_conn_error( conn, FD_QUIC_CONN_REASON_INTERNAL_ERROR );
@@ -1840,9 +1830,9 @@ fd_quic_handle_v1_one_rtt( fd_quic_t * quic, fd_quic_conn_t * conn, fd_quic_pkt_
       /* generate new keys */
       if( FD_UNLIKELY( fd_quic_gen_new_keys( &conn->new_keys[0],
                                              suite,
-                                             suite->hash,
                                              conn->secrets.new_secret[0],
-                                             conn->secrets.secret_sz[enc_level][0] )
+                                             conn->secrets.secret_sz[enc_level][0],
+                                             suite->hmac_fn, suite->hash_sz )
             != FD_QUIC_SUCCESS ) ) {
         /* set state to DEAD to reclaim connection */
         FD_LOG_WARNING(( "fd_quic_gen_keys failed on client" ));
@@ -1851,9 +1841,9 @@ fd_quic_handle_v1_one_rtt( fd_quic_t * quic, fd_quic_conn_t * conn, fd_quic_pkt_
       }
       if( FD_UNLIKELY( fd_quic_gen_new_keys( &conn->new_keys[1],
                                              suite,
-                                             suite->hash,
                                              conn->secrets.new_secret[1],
-                                             conn->secrets.secret_sz[enc_level][1] )
+                                             conn->secrets.secret_sz[enc_level][1],
+                                             suite->hmac_fn, suite->hash_sz )
             != FD_QUIC_SUCCESS ) ) {
         /* set state to DEAD to reclaim connection */
         FD_LOG_WARNING(( "fd_quic_gen_keys failed on server" ));
@@ -2861,7 +2851,7 @@ fd_quic_tx_buffered( fd_quic_t *      quic,
     if( flush ) {
       /* send empty batch to flush tx */
       fd_aio_pkt_info_t aio_buf = { .buf = NULL, .buf_sz = 0 };
-      int aio_rc = fd_aio_send( &quic->join.aio_tx, &aio_buf, 0, NULL, 1 );
+      int aio_rc = fd_aio_send( &quic->aio_tx, &aio_buf, 0, NULL, 1 );
       (void)aio_rc; /* don't care about result */
     }
     return 0u;
@@ -2943,7 +2933,7 @@ fd_quic_tx_buffered( fd_quic_t *      quic,
   cur_sz  -= (ulong)payload_sz;
 
   fd_aio_pkt_info_t aio_buf = { .buf = conn->crypt_scratch, .buf_sz = (ushort)( cur_ptr - conn->crypt_scratch ) };
-  int aio_rc = fd_aio_send( &quic->join.aio_tx, &aio_buf, 1, NULL, flush );
+  int aio_rc = fd_aio_send( &quic->aio_tx, &aio_buf, 1, NULL, flush );
   if( aio_rc == FD_AIO_ERR_AGAIN ) {
     /* transient condition - try later */
     return FD_QUIC_FAILED;

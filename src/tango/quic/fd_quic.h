@@ -405,30 +405,6 @@ typedef struct fd_quic_metrics fd_quic_metrics_t;
 
 /* fd_quic_t memory layout ********************************************/
 
-/* fd_quic_join_t contains externally provided objects that are
-   required to join an fd_quic_t. */
-
-struct __attribute__((aligned(16UL))) fd_quic_join {
-  /* User-provided callbacks */
-
-  fd_quic_callbacks_t cb;
-
-  /* fd_aio I/O abstraction */
-
-  fd_aio_t aio_tx; /* owned externally, used by fd_quic_t
-                      to send tx data to net driver */
-};
-typedef struct fd_quic_join fd_quic_join_t;
-
-/* FD_QUIC_MAGIC is used to signal the layout of shared memory region
-   of an fd_quic_t. */
-
-#define FD_QUIC_MAGIC (0xdadf8cfa01cc5460UL)
-
-/* fd_quic_t is the publicly exported memory layout of a QUIC memory
-   region.  fd_quic_t should not be statically allocated.  Instead, use
-   fd_quic_footprint() and fd_quic_join(). */
-
 struct fd_quic {
   ulong magic; /* ==FD_QUIC_MAGIC */
 
@@ -533,24 +509,8 @@ fd_quic_config_from_env( int  *   pargc,
    init, calls to aio may only be dispatched by the thread with
    exclusive access to QUIC that owns it. */
 
-FD_QUIC_API FD_FN_CONST fd_quic_callbacks_t *
-fd_quic_get_callbacks( fd_quic_t * quic );
-
-/* fd_quic_get_metrics returns a pointer to the metrics struct of the
-   given QUIC in the caller's local address space.  The lifetime of the
-   returned pointer is valid for the lifetime of the fd_quic_t, with or
-   without an active join. */
-
-FD_QUIC_API FD_FN_CONST fd_quic_metrics_t const *
-fd_quic_get_metrics( fd_quic_t const * quic );
-
-/* fd_quic_get_aio_net_rx configures the given aio to receive data into
-   quic instance.  aio should be deleted before lifetime of quic ends.
-   Returns given aio on success. */
-
-FD_QUIC_API fd_aio_t *
-fd_quic_get_aio_net_rx( fd_quic_t * quic,
-                        fd_aio_t *  aio );
+FD_QUIC_API fd_aio_t const *
+fd_quic_get_aio_net_rx( fd_quic_t * quic );
 
 /* fd_quic_set_aio_net_tx sets the fd_aio_t used by the fd_quic_t to
    send tx data to the network driver.  Cleared on fini. */

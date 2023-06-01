@@ -4,11 +4,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "fd_pcap.h"
-#include "test_helpers.c"
-
-uchar fail = 0;
-
 void
 my_stream_receive_cb( fd_quic_stream_t * stream,
                       void *             ctx,

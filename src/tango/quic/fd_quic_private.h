@@ -16,6 +16,12 @@
 #define DEBUG(...)
 #endif
 
+/* FD_QUIC_DISABLE_CRYPTO: set to 1 to disable packet protection and
+   encryption.  Only intended for testing.
+   FIXME not fully implemented (#256) */
+#ifndef FD_QUIC_DISABLE_CRYPTO
+#define FD_QUIC_DISABLE_CRYPTO 0
+#endif
 
 enum {
   FD_QUIC_TYPE_INGRESS = 1 << 0,
@@ -276,15 +282,6 @@ void
 fd_quic_reclaim_pkt_meta( fd_quic_conn_t *     conn,
                           fd_quic_pkt_meta_t * pkt_meta,
                           uint                 enc_level );
-
-/* fd_quic_aio_send queues a batch of packets to the network for tx.
-   (Packets including Ethernet and IP headers) */
-
-int
-fd_quic_aio_send( fd_quic_t *               quic,
-                  fd_aio_pkt_info_t const * batch,
-                  ulong                     batch_cnt,
-                  ulong *                   opt_batch_idx );
 
 FD_PROTOTYPES_END
 

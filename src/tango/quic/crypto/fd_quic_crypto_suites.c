@@ -198,7 +198,8 @@ fd_quic_gen_secrets(
 int
 fd_quic_gen_new_secrets(
     fd_quic_crypto_secrets_t * secrets,
-    EVP_MD const *             md ) {
+    fd_hmac_fn_t               hmac_fn,
+    ulong                      hash_sz ) {
   /* Defined as:
      application_traffic_secret_N+1 =
            HKDF-Expand-Label(application_traffic_secret_N,
@@ -355,9 +356,10 @@ int
 fd_quic_gen_new_keys(
     fd_quic_crypto_keys_t *  keys,
     fd_quic_crypto_suite_t * suite,
-    EVP_MD const *           md,
     uchar const *            secret,
-    ulong                    secret_sz ) {
+    ulong                    secret_sz,
+    fd_hmac_fn_t             hmac_fn,
+    ulong                    hash_sz ) {
   ulong key_sz = suite->key_sz;
   ulong iv_sz  = suite->iv_sz;
 
