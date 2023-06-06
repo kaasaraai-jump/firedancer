@@ -38,7 +38,7 @@ fd_frank_signal_trap( int sig ) {
 int
 main( int     argc,
       char ** argv ) {
-  fd_boot( &argc, &argv );
+  fd_boot_secure( &argc, &argv );
   fd_tempo_tick_per_ns( NULL ); /* eat calibration cost at deterministic place */
 
   FD_LOG_NOTICE(( "app init" ));
@@ -112,6 +112,8 @@ main( int     argc,
     }
 
   } while(0);
+
+  fd_sandbox( &argc, &argv );
 
   /* Boot all the tiles that main controls */
 

@@ -18,6 +18,7 @@
 #include "rng/fd_rng.h"             /* includes bits/fd_bits.h */
 #include "tpool/fd_tpool.h"         /* includes tile/fd_tile.h and scratch/fd_scratch.h */
 #include "alloc/fd_alloc.h"         /* includes wksp/fd_wksp.h */
+#include "sandbox/fd_sandbox.h"
 
 /* Additional fd_util APIs that are not included by default */
 
@@ -274,6 +275,13 @@ FD_PROTOTYPES_BEGIN
 void
 fd_boot( int *    pargc,
          char *** pargv );
+
+/* The same as `fd_boot` except it requires CAP_SETPCAP, and will drop
+   all capabilities from the bounding set with PR_CAPBSET_DROP before
+   creating any threads. */
+void
+fd_boot_secure( int *    pargc,
+                char *** pargv );
 
 void
 fd_halt( void );

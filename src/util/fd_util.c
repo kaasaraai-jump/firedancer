@@ -11,6 +11,15 @@ fd_boot( int *    pargc,
 }
 
 void
+fd_boot_secure( int *    pargc,
+                char *** pargv ) {
+  fd_log_private_boot    ( pargc, pargv );
+  fd_shmem_private_boot  ( pargc, pargv );
+  fd_sandbox_thread_caps ( pargc, pargv );
+  fd_tile_private_boot   ( pargc, pargv ); /* The caller is now tile 0 */
+}
+
+void
 fd_halt( void ) {
   /* At this point, we are immediately before normal program
      termination, and fd has already been booted. */
